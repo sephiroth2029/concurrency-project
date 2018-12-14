@@ -1,34 +1,34 @@
 # **Concurrency (CSC-564)**
 ## **Distributed SLIQ - Final Project**
 ### **Introduction**
-In the past couple of decades, many software developers realized that hardware manufacturers are approaching the physical limits of computational components [[1]]. That realization increased the interest in obtaining the maximum benefit out of those components, and alternatives to the synchronous programming model gained the developer's community attention. Software developers indeed gained a performance boost by better utilizing their resources available, but it came with a cost: the complexity of the software increased and the debugging process became more challenging.
+During the past couple of decades, many software developers realized that hardware manufacturers are approaching the physical limits of computational components [[1]]. That realization increased the interest in obtaining the maximum benefit out of those components, and alternatives to the synchronous programming model gained the developer's community attention. Software developers indeed achieved a performance boost by better utilizing the resources available, but it came with a cost: the complexity of the software increased and the debugging process became more challenging.
 
 Data science is one of the fields where performance is paramount, since large volumes of data need to be processed in the shortest time frame possible, for the results to be relevant in their own context. This project presents a partially distributed implementation of SLIQ [2] aiming to improve the performance and the memory restrictions imposed by the algorithm.
 
 ### **Description of the problem**
-SLIQ is a data mining classification algorithm which improves previous algorithms such as ID3 and C4.5 where all of the data needs to reside in memory and needs to be sorted on every iteration [3]. The core contribution of SLIQ is the introduction of two new data structures -class list and attribute list- which allow to persist to hard disk the attributes, sorting the instances only once and maintaining in memory only the class list. This overcame two problems:
+SLIQ is a data mining classification algorithm which improves previous algorithms such as ID3 and C4.5 where all of the data needs to reside in memory and needs to be sorted on every iteration [3]. The core contribution of SLIQ is the introduction of two new data structures—class list and attribute list—which allow to persist to hard disk the attributes, sorting the instances only once and maintaining in memory only the class list. This overcame two problems:
 1. The memory requirements were lowered from MxN, where M are the number of attributes and N the number of instances, to just N.
 2. The processing was simplified by sorting at the beginning of the algorithm.
 
 However, there are two possible improvements that can be done to SLIQ: distributing the class list and distributing the attribute processing. Both of these changes are explored in this project.
 
-Firstly, the amount of information currently available can easily reach the terabytes order, which might require a vast amount of main memory for huge datasets. Other areas of software engineering moved from vertical scalability to horizontal, exploiting modern resources such as cloud computing. This project aims to overcome the main memory requirement by moving the class list to a distributed set, where it can grow horizontally as needed. 
+Firstly, the amount of information currently available can easily reach the terabytes order, which might require a vast amount of main memory for huge datasets. Other areas of software engineering switched from vertical scalability architectures to horizontal ones, exploiting modern resources such as cloud computing. This project aims to overcome the main memory requirement by moving the class list to a distributed set, where it can grow horizontally as needed. 
 
-Secondly, processing sequentially the attributes' metrics is unnecesary as they do not depend on each other. This project explores if the performance can be improved by executing these computations in asynchronously. The project does not implement distributed calls for the computations, but that would be an alternative to obtain a better performance for very large data sets. While it may be argued that hard disk communication is faster than the networked one, recent improvements in networking components are making that assumption irrelevant [4].
+Secondly, processing sequentially the attributes' metrics is unnecesary as they do not depend on each other. This project explores if the performance can be improved by executing these computations asynchronously. The project does not implement distributed calls for the computations, but that would be an alternative to obtain a better performance for very large data sets. While it may be argued that hard disk communication is faster than the networked one, recent improvements in networking components are making that assumption irrelevant [4].
 
 ### **Background**
-Newer data science tools and frameworks exploit the advancements both in modern hardware components, in optimized runtime environments and in the parallelization of algorithms.
+Newer data science tools and frameworks exploit the advancements in modern hardware components, optimized runtime environments and parallelized algorithms.
 
 Regarding hardware components, Horovod [[5]] is a framework to deploy single-GPU TensorFlow, Keras and PyTorch programs into multiple GPUs, hence obtaining a performance boost through the utilization of multiple fast-processing pieces of hardware. The restriction of this approach is that not all algorithms are compatible nor suitable with the aforementioned packages; their main focus is in neural networks which is a subset of the algorithms available.
 
-As for optimized runtime environments, Intel released the *Deep Learning Deployment Toolkit*, a set of tools whose purpose is to process a trained model in order to improve it, through tasks such as the fusion of network layers and branch prunning, and to produce an optimized runtime interface for the specific hardware that will use the model. Similarly to Harovod, the Deep Learning Deployment Toolkit limits its usage to neural networks.
+As for optimized runtime environments, Intel released the *Deep Learning Deployment Toolkit*, a set of tools whose purpose is to process a trained model in order to improve it, through tasks such as the fusion of network layers and branch prunning. Finally, the tools produce an optimized runtime interface for the specific hardware that will use the model. Similarly to Harovod, the Deep Learning Deployment Toolkit limits its usage to neural networks.
 
 Shashikumar et al. [6] explored the parallelization of SLIQ, and followed a similar approach to the one applied in this project. They describe how SLIQ was an improvement to the existing tree-based algorithms for classification, as it only requires the class list to be in main memory while the attribute lists can be persisted in hard disk as long as they are ordered. However, the parallelization of SLIQ does not remove the memory requirements for large datasets and the access to disk could slow down the algorithm's processing.
 
-Mohammed Zaki [7] describes in greater detail the mechanisms in which classification algorithms' performance can be improved. In specific, for SLIQ, he describes SLIQ/R which uses a replicated class list and SLIQ/D which uses a distributed class list. He points out that SLIQ/D had a better usage of memory -which is reasonable, as it is as big as the size of the partitions- and that SLIQ/R had a better performance. However, he does not provide metrics that allow to see how the second case reflects against the synchronous algorithm.
+Mohammed Zaki [7] describes in greater detail the mechanisms in which classification algorithms' performance can be improved. In specific, for SLIQ, he describes SLIQ/R which uses a replicated class list and SLIQ/D which uses a distributed class list. He points out that SLIQ/D had a better usage of memory—which is reasonable, as it is as big as the size of the partitions—and that SLIQ/R had a better performance. However, he does not provide metrics that allow to see how the second case reflects against the synchronous algorithm.
 
 ### **Implementation**
-The implementation is composed of a standalone Atomix project and a Spring Boot project, composed of three submodules:
+The implementation is composed of a standalone Atomix project and a Spring Boot project with three submodules:
 
 1. `sliq-impl` contains the generic parts of the SLIQ implementation. The construction of the algorithm is not complete, as the main focus of this project is to analyze the feasiblity of the implementation and to compare equivalent implementations of the algorithm.
 2. `sync-impl` is the synchronous implementation of the `AttributeFileProcessors`, which makes the algorithm to execute as the original SLIQ implementation.
@@ -109,13 +109,15 @@ The following log extract shows the election phase of the Raft implementation:
 [atomix-cluster-heartbeat-sender] INFO io.atomix.cluster.impl.DefaultClusterMembershipService - client1 - Member updated: Member{id=client1, address=127.0.0.1:6000, properties={}}
 ```
 
-Once the client and the clusters finished the synchronization process, the processor clears the set reserved for its attribute:
+Once the client and the clusters finished the synchronization process, the processor clears the distributed set reserved for its attribute:
 
 ```java
 atomix.getSortedSet(attributeName).clear();
 ```
 
-This is required because the cluster will preserve the values of the last run. Then, the `SliqImpl` reads the source file and sends each instance attribute to its processor. For the distributed implementation, a distributed sorted set is used to avoid loading all of the values in memory locally at this point. Each time a value is appended to the distributed primitive, the structure maintains a lexicographical ordering. It is important to note that the asynchronous implementation of the set is used:
+This is required because the cluster will preserve the values of the last run.
+
+Then, the `SliqImpl` reads the source file and sends each instance attribute to its `AttributeFileProcessor`. For the distributed implementation, a distributed sorted set is used to avoid loading all of the values in memory locally at this point. Each time a value is appended to the distributed primitive, the structure maintains a lexicographical ordering. It is important to note that the asynchronous implementation of the set is used:
 
 ```java
 DistributedSortedSet<String> ss = atomix.getSortedSet(attributeName);
@@ -155,7 +157,7 @@ managementGroup {
 }
 ```
 
-Each node must have its ID inside the discovery list for it to be part of the cluster. For this project, the two instances are started in the same machine. Therefore, the program configures the data directory -used to persist the state and be able to recover from a shutdown- explicitly to avoid conflicts:
+Each node must have its ID inside the discovery list for it to be part of the cluster. For this project, the two instances start in the same machine. Therefore, the program configures the data directory—used to persist the state and be able to recover from a shutdown—explicitly to avoid conflicts:
 
 ```java
 System.setProperty("atomix.data", "member-2-data");
@@ -212,7 +214,7 @@ The performance evaluation was conducted with the following criteria:
 ...
 ```
 
-And eventually started to return timeouts:
+And eventually, the distributed primitives timed out:
 
 ```
 io.atomix.primitive.PrimitiveException$Timeout
@@ -257,7 +259,7 @@ The program consumed almost all of the available resources:
 
 ![Missing graph][103]
 
-The cause of the problem was the asynchronous calls to add elements to the distributed attribute lists. The cluster was not able to process all the incoming requests and eventually stopped accepting requests. Then, the program was modified to maintain a list of 1.000 requests and then wait until they completed. The program execution was again too slow and it did not finish for one node after several minutes.
+The cause of the problem was the asynchronous calls to add elements to the distributed attribute lists. The cluster was not able to process all the incoming requests and eventually stopped accepting requests. To solve this, the adjusted program maintains a list of 1.000 requests and then waits until they completed. The program execution was too slow even after this change and it did not finish for one node after several minutes.
 
 Finally, the execution times for the `sync-impl` module were almost constant, while they increased exponentially for the `distributed-impl` module:
 
@@ -290,7 +292,7 @@ And every method call will return a `CompletableFuture` instance:
 adss.add(element);
 ```
 
-Note that the previous call will not execute synchronously. If the developer wanted to wait until the action is actually executed in the cluster, he or she can call the `join` method, which will block until the task is completed:
+Note that the previous call will not execute synchronously. If the developer wanted to wait until the action is actually executed in the cluster, he or she must call the `join` method, which will block until the task is completed:
 
 ```java
 adss.add(element).join();
@@ -301,19 +303,19 @@ The API is very intuitive. Despite the lack of proper documentation, the impleme
 Aditionally, the asynchronous code to process the entropies per attribute failed as well. This is most likely due to an implementation error, as a subsecuent analysis showed that the component shared some data structures and when different threads tried to access them concurrently, errors appeared randomly.
 
 ### **Conclusion**
-The project explored the implementation of SLIQ -a data mining algorithm for classification- in a local and distributed environment. In order to do that, the modules use a common base implementation where it abstracted only the parts related to the class list and the attributes' lists. In the distributed implementation, those data structures were implemented as distributed primitives using the Raft protocol.
+The project explored the implementation of SLIQ—a data mining algorithm for classification—in a local and distributed environment. In order to do that, the modules use a common base implementation that abstracts only the parts related to the class list and the attributes' lists. In the distributed implementation, those data structures were implemented as distributed primitives using the Raft protocol.
 
-The analysis concluded that the operations on the distributed primitives are much slower than expected in the Atomix framework. This prevented the evaluation from testing with a big data set, which was the original objective. Another problem of the implementation was the asynchronous processing of entropies, most likely due to a wrong design of the internal data structures.
+The analysis concluded that the operations on the distributed primitives in the Atomix framework are much slower than expected. This prevented the evaluation from testing with a big data set, which was the original objective. Another problem of the implementation was the asynchronous processing of entropies, most likely due to a wrong design of the internal data structures.
 
 In conclusion, the distributed implementation using Atomix did not outperform the local, synchronous implementation mostly because the distributed primitives used to test introduced an excessive overhead. Therefore, the implementation is not suitable for large datasets as the computation time increases exponentially as the data set grows bigger.
 
 ### **Future work**
-There are several parts and new approaches that could be tested:
+There are several parts and new approaches that could be further explored:
 
 1. The interface-driven approach of the implementation allows to test with other frameworks, not only Atomix. Redis would be an interesting option, as it works entirely in memory and should be faster.
 2. The implementation tries to find the lowest entropy in all attributes. This is most likely the reason of the errors obtained in the asynchronous processing. An improvement would be to obtain the best entropy per attribute and then conclude which is the lowest.
 3. The implementation stops only after a fixed number of nodes have been added to the tree. A better implementation would compare the resulting entropy and if it changed only slightly, then it should prune that sub tree.
-4. All the cluster nodes started in a single 8-core CPU, with 16 GB of RAM. It would be interesting to see how that would change for two independent cluster nodes and a client.
+4. All the cluster nodes started in a single 8-core CPU, with 16 GB of RAM. It would be interesting to see how that would change for two independent cluster nodes and a client on different machines.
 
 ### **References**
 [[1]] Sutter, Herb. "The Concurrency Revolution." [Online]. Available: http://www.drdobbs.com/the-concurrency-revolution/184401916
