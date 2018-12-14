@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: sync-sliq
+  profiles:
+    active: chaos-monkey
+server:
+  port: 0
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+  instance:
+    preferIpAddress: true
+
+  endpoints:
+    web:
+      exposure:
+        include: health,info,chaosmonkey,metrics
+
+sliq:
+  classAttributeFile: Activity
+  sourcePath: C:\Users\Giovanni\Google Drive\UVic\MCS\Concurrency\Project\sliq\ConfLongDemo_JSI.txt
