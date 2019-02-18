@@ -14,13 +14,11 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
+/**
+ * This is a test drive for the project jamboree.
+ */
 @RunWith(Parameterized.class)
 public class SliqImplTest {
-
-    //    @Parameterized.Parameters
-    public static Collection<Integer> data() {
-        return Arrays.asList(1, 2, 5, 7, 10);
-    }
 
     @Parameterized.Parameters
     public static Collection<String> data2() {
@@ -33,7 +31,6 @@ public class SliqImplTest {
         );
     }
 
-    //    @Parameterized.Parameter
     public Integer repetitions = 5;
 
     @Parameterized.Parameter
@@ -56,19 +53,15 @@ public class SliqImplTest {
         sliq.setClassAttributeProcessor(classAttributeProcessor);
         sliq.setClassList(classList);
         sliq.setMinEntropyHistory(minEntroyHistory);
-//        sliq.setSourcePath("C:\\Users\\Giovanni\\Google Drive\\UVic\\MCS\\Concurrency\\Project\\sliq\\ConfLongDemo_JSI.txt");
         sliq.setSourcePath(file);
         AttributeFileProcessor[] attributeFileProcessors = {
                 new AttributeFileProcessorAtomix("Person-ID", entropyProcessorLocal),
                 new AttributeFileProcessorAtomix("Tag-ID", entropyProcessorLocal),
-//                new AttributeFileProcessor.NullAttributeFileProcessor(),
                 new AttributeFileProcessor.NullAttributeFileProcessor(),
                 new AttributeFileProcessor.NullAttributeFileProcessor(),
                 new AttributeFileProcessorAtomix("X-Coord", entropyProcessorLocal),
                 new AttributeFileProcessorAtomix("Y-Coord", entropyProcessorLocal),
                 new AttributeFileProcessorAtomix("Z-Coord", entropyProcessorLocal),
-//                new AttributeFileProcessor.NullAttributeFileProcessor(),
-//                new AttributeFileProcessor.NullAttributeFileProcessor(),
                 classAttributeProcessor,
         };
         sliq.setAttributeFileProcessors(attributeFileProcessors);

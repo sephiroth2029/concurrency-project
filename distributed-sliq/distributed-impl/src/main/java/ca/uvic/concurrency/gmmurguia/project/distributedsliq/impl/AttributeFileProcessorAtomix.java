@@ -12,7 +12,6 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.apache.commons.lang3.RandomUtils;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -20,18 +19,31 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * The Atomix implementation. It will initialize an Atomix client and will try to connect to the cluster. All the
+ * processing will be done via distributed primitives.
+ */
 @Getter
 @Setter
 @RequiredArgsConstructor
 public class AttributeFileProcessorAtomix implements AttributeFileProcessor {
 
+    /**
+     * Keeps an incrementing counter of ports, to avoid port conflicts when multiple instances start concurrently.
+     */
     public static AtomicInteger portCounter = new AtomicInteger(0);
+
+    private final int tolerance = 1000;
 
     @NonNull
     private String attributeName;
 
     private boolean classAttribute;
 
+    /**
+     * The Atomix client. It can be shared among components, and it is the recommended way of usage. More instances
+     * result in higher synchronization overhead.
+     */
     public static Atomix atomix;
 
     @NonNull
@@ -73,24 +85,43 @@ public class AttributeFileProcessorAtomix implements AttributeFileProcessor {
 
     private List<CompletableFuture> futures = new ArrayList<>();
 
+    /**
+     * Adds a row to the distributed cluster.
+     *
+     * @param index the row's index.
+     * @param value the row's value.
+     */
     @Override
     public void addRow(Integer index, String value) {
+        String element = getElement(index, value);
+        DistributedSortedSet<String> ss = atomix.getSortedSet(attributeName);
+        AsyncDistributedSortedSet<String> adss = ss.async();
+        CompletableFuture cf = adss.add(element);
+        futures.add(cf);
+
+        // Here the idea is to have a sort of batch for the updates
+        if (futures.size() == tolerance) {
+            futures.forEach(CompletableFuture::join);
+            futures.clear();
+        }
+    }
+
+    private String getElement(Integer index, String value) {
+        // The order depends on the type of column
         String element;
         if (isClassAttribute()) {
             element = String.format("%d,%s", index, value);
         } else {
             element = String.format("%s,%d", value, index);
         }
-        DistributedSortedSet<String> ss = atomix.getSortedSet(attributeName);
-        AsyncDistributedSortedSet<String> adss = ss.async();
-        CompletableFuture cf = adss.add(element);
-        futures.add(cf);
-        if (futures.size() == 1000) {
-            futures.forEach(CompletableFuture::join);
-            futures.clear();
-        }
+        return element;
     }
 
+    /**
+     * The iterator will work over the distributed Atomix primitive.
+     *
+     * @return an usable iterator for this attribute.
+     */
     @Override
     public Iterator<String[]> getIterator() {
         return new Iterator<String[]>() {

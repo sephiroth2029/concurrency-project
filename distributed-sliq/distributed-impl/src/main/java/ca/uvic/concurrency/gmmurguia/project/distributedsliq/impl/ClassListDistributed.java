@@ -2,21 +2,18 @@ package ca.uvic.concurrency.gmmurguia.project.distributedsliq.impl;
 
 import ca.uvic.concurrency.gmmurguia.project.sliqimpl.ClassAttribute;
 import ca.uvic.concurrency.gmmurguia.project.sliqimpl.ClassList;
-import io.atomix.cluster.Node;
-import io.atomix.cluster.discovery.BootstrapDiscoveryProvider;
 import io.atomix.core.Atomix;
-import io.atomix.protocols.raft.partition.RaftPartitionGroup;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.RandomUtils;
 
 import javax.annotation.PostConstruct;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.SortedSet;
 
-import static ca.uvic.concurrency.gmmurguia.project.distributedsliq.impl.AttributeFileProcessorAtomix.portCounter;
-
+/**
+ * The distributed implementation of the class list, backed up by an Atomix distributed primitive.
+ */
 @RequiredArgsConstructor
 public class ClassListDistributed implements ClassList {
 
@@ -25,31 +22,19 @@ public class ClassListDistributed implements ClassList {
 
     private static Atomix atomix;
 
+    /**
+     * Meant to be called right after the object is constructed and either create a new Atomix instance or copy that
+     * of the <code>AttributeFileProcessorAtomix</code>. After testing, it's better to avoid creating too many members
+     * of the cluster to avoid too much overhead.
+     */
     @PostConstruct
     public void init() {
         atomix = AttributeFileProcessorAtomix.atomix;
-//        int counter = portCounter.incrementAndGet();
-//        atomix = Atomix.builder()
-//                .withMemberId("client-" + counter)
-//                .withAddress("localhost:" + (counter + 6000))
-//                .withMembershipProvider(BootstrapDiscoveryProvider.builder()
-//                        .withNodes(
-//                                Node.builder()
-//                                        .withId("member-1")
-//                                        .withAddress("localhost:5000")
-//                                        .build(),
-//                                Node.builder()
-//                                        .withId("member-2")
-//                                        .withAddress("localhost:5001")
-//                                        .build())
-//                        .build())
-//                .withPartitionGroups(RaftPartitionGroup.builder("data")
-//                        .withMembers("member-1", "member-2")
-//                        .build())
-//                .build();
-//        atomix.start().join();
     }
 
+    /**
+     * Moves the data from the attribute distributed primitive to the class's.
+     */
     @Override
     public void fill() {
         if (atomix == null) {
@@ -57,7 +42,9 @@ public class ClassListDistributed implements ClassList {
         }
         Map<Integer, ClassAttribute> classList = atomix.getMap(getClassListName());
         SortedSet<String> attrValues = atomix.getSortedSet(attributeName);
+        // remove any leftovers
         classList.clear();
+
         Iterator<String> it = attrValues.iterator();
         while (it.hasNext()) {
             String[] parts = it.next().split(",");
@@ -65,17 +52,36 @@ public class ClassListDistributed implements ClassList {
         }
     }
 
+    /**
+     * Obtains the leaf value of the requested row ID. Note that leaf values are what will later be used by the
+     * decision tree.
+     *
+     * @param rid the row ID to be queried.
+     * @return the leaf value of the row ID.
+     */
     @Override
     public Integer getLeafOf(String rid) {
         return getClassAttributeOf(rid).getLeaf();
     }
 
+    /**
+     * Returns the @{@link ClassAttribute} of the requested row ID.
+     *
+     * @param rid the row ID to be queried.
+     * @return the {@link ClassAttribute} of the row ID.
+     */
     @Override
     public ClassAttribute getClassAttributeOf(String rid) {
         Map<Integer, ClassAttribute> classList = atomix.getMap(getClassListName());
         return classList.get(Integer.valueOf(rid));
     }
 
+    /**
+     * Updates the {@link ClassAttribute} at the specified row ID.
+     *
+     * @param rid the row ID of the {@link ClassAttribute} to be updated.
+     * @param classAttribute the new value of the {@link ClassAttribute}.
+     */
     @Override
     public void updateClassAttribute(String rid, ClassAttribute classAttribute) {
         Map<Integer, ClassAttribute> classList = atomix.getMap(getClassListName());

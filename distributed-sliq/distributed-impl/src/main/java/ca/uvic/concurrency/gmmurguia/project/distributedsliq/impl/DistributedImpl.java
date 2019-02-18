@@ -9,6 +9,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 import org.springframework.context.annotation.Bean;
 
+/**
+ * The entry point of the program and main configurer of the Spring Boot/Cloud application.
+ */
 @SpringBootApplication
 @EnableEurekaClient
 public class DistributedImpl {
