@@ -18,6 +18,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Implements the SLIQ algorithm: https://www.semanticscholar.org/paper/SLIQ%3A-A-Fast-Scalable-Classifier-for-Data-Mining-Mehta-Agrawal/39b58ef6487c893219c77c61c762eee5694d0e36
+ * This is a partial implementation, as it doesn't expand the tree entirely; but only a fixed number of nodes for the
+ * project Jamboree's purpose.
+ */
 @Component
 @Getter
 @Setter
@@ -41,6 +46,12 @@ public class SliqImpl {
     @Autowired
     private CompleteProcessor completeProcessor;
 
+    /**
+     * Starts the algorithm. Processes until it reaches the target number of nodes to process.
+     *
+     * @param targetNodes
+     * @throws IOException
+     */
     public void start(int targetNodes) throws IOException {
         splitInFiles(sourcePath);
         classList.fill();

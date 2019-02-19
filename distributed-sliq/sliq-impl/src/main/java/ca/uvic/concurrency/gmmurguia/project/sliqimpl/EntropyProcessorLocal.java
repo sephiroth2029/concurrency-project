@@ -13,6 +13,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * This processor works on the local memory.
+ */
 @Getter
 @Setter
 @RequiredArgsConstructor
@@ -26,6 +29,15 @@ public class EntropyProcessorLocal implements EntropyProcessor {
     @NonNull
     private MinEntropyHistory minEntropyHistory;
 
+    /**
+     * Processes the given attribute's entropies.
+     *
+     * @param attribute             the target attribute.
+     * @param currentClassCountersR the counters on the right.
+     * @param currentClassCountersL the counters on the left.
+     * @param processed             the labels of the attributes processed.
+     * @throws IOException if the attribute's file can't be loaded.
+     */
     @Override
     public void processAttributeEntropies(@NonNull String attribute,
                                           @NonNull HashMap<Integer, HashMap<String, Integer>> currentClassCountersR,
@@ -50,15 +62,24 @@ public class EntropyProcessorLocal implements EntropyProcessor {
             currentLCounter.put(currAttr.getValue(), currentLCounter.get(currAttr.getValue()) + 1);
             currentRCounter.put(currAttr.getValue(), currentRCounter.get(currAttr.getValue()) - 1);
 
-            BigDecimal totalL = BigDecimal.valueOf(currentLCounter.values().stream().mapToInt(Integer::intValue).sum());
-            BigDecimal totalR = BigDecimal.valueOf(currentRCounter.values().stream().mapToInt(Integer::intValue).sum());
+            // Aggregate the left and right counters
+            BigDecimal totalL = BigDecimal.valueOf(currentLCounter.values()
+                    .stream()
+                    .mapToInt(Integer::intValue)
+                    .sum());
+            BigDecimal totalR = BigDecimal.valueOf(currentRCounter.values()
+                    .stream()
+                    .mapToInt(Integer::intValue)
+                    .sum());
             BigDecimal total = totalL.add(totalR);
 
+            // Compute entropies
             BigDecimal entropyL = getEntropy(currentLCounter, totalL);
             BigDecimal entropyR = getEntropy(currentRCounter, totalR);
 
             BigDecimal entropy = entropyL.divide(total).add(entropyR.divide(total));
 
+            // Find the lowest and update if needed
             BigDecimal minEntropy = minEntropyHistory.getMinEntropy(currAttr.getLeaf());
             if (minEntropy.compareTo(entropy) > 0) {
                 minEntropyHistory.updateMinEntropiesFor(currAttr.getLeaf(),

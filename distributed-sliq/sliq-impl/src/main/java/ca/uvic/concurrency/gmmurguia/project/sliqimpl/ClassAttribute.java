@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+/**
+ * It's the attribute that we want to classify.
+ */
 @Getter
 @Setter
 @AllArgsConstructor
@@ -17,6 +20,11 @@ public class ClassAttribute {
 
     private int leaf;
 
+    /**
+     * Updates the values of this class attribute with the values of the one provided.
+     *
+     * @param newClassAttribute
+     */
     public void update(ClassAttribute newClassAttribute) {
         this.rid = newClassAttribute.rid;
         this.value = newClassAttribute.value;

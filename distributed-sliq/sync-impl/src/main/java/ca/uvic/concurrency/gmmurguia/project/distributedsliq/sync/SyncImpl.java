@@ -12,6 +12,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 import org.springframework.context.annotation.Bean;
 
+/**
+ * The entry point for the synchronous implementation. Starts the program and states the basic configuration.
+ */
 @SpringBootApplication
 @EnableEurekaClient
 public class SyncImpl {

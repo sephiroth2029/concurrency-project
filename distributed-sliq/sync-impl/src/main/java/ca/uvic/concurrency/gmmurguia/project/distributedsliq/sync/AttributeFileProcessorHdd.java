@@ -18,6 +18,9 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Holds the attribute in a file.
+ */
 @Getter
 @Setter
 @RequiredArgsConstructor
@@ -33,20 +36,37 @@ public class AttributeFileProcessorHdd implements AttributeFileProcessor {
 
     private boolean classAttribute;
 
+    /**
+     * Creates an attribute processor for the given raw file.
+     *
+     * @param rawFile the raw file for this attribute.
+     * @param classAttribute specifies if this is a class attribute.
+     */
     public AttributeFileProcessorHdd(String rawFile, boolean classAttribute) {
         this.rawFile = rawFile;
         this.classAttribute = classAttribute;
     }
 
+    /**
+     * Opens the underlying file.
+     */
     @Override
     public void init() {
         try {
             bw = new BufferedWriter(new FileWriter(rawFile));
         } catch (IOException e) {
+            // Not interested in handling, if there is an error just propagate all the way to know the cause.
             throw new RuntimeException(e);
         }
     }
 
+    /**
+     * Adds a row to the file.
+     *
+     * @param index the row index.
+     * @param value the value associated.
+     * @throws IOException if there is a problem accessing the file.
+     */
     @Override
     public void addRow(Integer index, String value) throws IOException {
         addRow(index.toString(), value, bw);
@@ -59,6 +79,12 @@ public class AttributeFileProcessorHdd implements AttributeFileProcessor {
         bw.newLine();
     }
 
+    /**
+     * Obtains an iterator for the file.
+     *
+     * @return an iterator for the file.
+     * @throws FileNotFoundException if the attribute file no longer exists.
+     */
     @Override
     public Iterator<String[]> getIterator() throws FileNotFoundException {
         return new Iterator<String[]>() {
@@ -92,6 +118,14 @@ public class AttributeFileProcessorHdd implements AttributeFileProcessor {
         };
     }
 
+    private String getSortedFileName() {
+        return rawFile + "_sorted";
+    }
+
+    /**
+     * Sorts the attribute rows in ascending order, considering the attribute value. It will create a new file with
+     * the sorted attribute list.
+     */
     @Override
     public void sortAttribute() {
         CSVReader csvReader;
@@ -112,10 +146,9 @@ public class AttributeFileProcessorHdd implements AttributeFileProcessor {
         }
     }
 
-    private String getSortedFileName() {
-        return rawFile + "_sorted";
-    }
-
+    /**
+     * Closes the underlying file.
+     */
     @Override
     public void close() {
         try {
@@ -125,6 +158,11 @@ public class AttributeFileProcessorHdd implements AttributeFileProcessor {
         }
     }
 
+    /**
+     * Returns the attribute's name.
+     *
+     * @return the attribute's name.
+     */
     @Override
     public String getAttributeName() {
         return rawFile;

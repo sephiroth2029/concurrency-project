@@ -7,6 +7,9 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
+/**
+ * Keeps track of the minimum entropy computation values.
+ */
 @Getter
 @Setter
 @AllArgsConstructor
